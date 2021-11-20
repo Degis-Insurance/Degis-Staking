@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 import "./interfaces/IBuyerToken.sol";
+import "./interfaces/IDegisToken.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract PurchaseIncentiveVault {
@@ -9,8 +10,11 @@ contract PurchaseIncentiveVault {
     address public owner;
 
     IBuyerToken buyerToken;
+    IDegisToken degis;
 
     mapping(uint256 => uint256) sharesInRound;
+
+    mapping(uint256 => address[]) usersInRound;
 
     mapping(uint256 => bool) hasDistributed;
 
@@ -26,9 +30,10 @@ contract PurchaseIncentiveVault {
     event ChangeDegisPerRound(uint256 _oldPerRound, uint256 _newPerRound);
     event ChangeDistributeInterval(uint256 _oldInterval, uint256 _newInterval);
 
-    constructor(address _buyerToken) {
+    constructor(address _buyerToken, address _degisToken) {
         owner = msg.sender;
         buyerToken = IBuyerToken(_buyerToken);
+        degis = IDegisToken(_degisToken);
     }
 
     modifier onlyOwner() {
@@ -57,6 +62,10 @@ contract PurchaseIncentiveVault {
         // buyerToken.safeTransferFrom(msg.sender, address(this), _amount);
         buyerToken.burn(msg.sender, _amount);
 
+        if (userSharesInRound[msg.sender][round] == 0) {
+            usersInRound[round].push(msg.sender);
+        }
+
         userSharesInRound[msg.sender][round] += _amount;
         sharesInRound[round] += _amount;
     }
@@ -73,7 +82,12 @@ contract PurchaseIncentiveVault {
 
         uint256 totalShares = sharesInRound[round];
 
-        for (uint256 i=0; i< )
+        for (uint256 i = 0; i < 20; i++) {
+            address user = usersInRound[round][i];
+            uint256 amount = userSharesInRound[round];
+
+            degis.mint(user, amount);
+        }
 
         lastDistribution = block.number;
         round += 1;

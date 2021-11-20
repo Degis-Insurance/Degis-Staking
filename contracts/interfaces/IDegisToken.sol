@@ -13,25 +13,37 @@ interface IDegisToken is IERC20 {
     // *************************************** Functions ************************************** //
     // ---------------------------------------------------------------------------------------- //
 
-    function passMinterRole(address) external returns (bool);
+    function cap() external pure returns (uint256);
 
-    function passOwnership(address) external returns (bool);
+    function addMinter(address) external;
 
-    function passBurnerRole(address) external returns (bool);
+    function removeMinter(address) external;
 
-    function releaseOwnership() external returns (bool);
+    function addBurner(address) external;
+
+    function removeBurner(address) external;
+
+    function passOwnership(address) external;
+
+    function releaseOwnership() external;
 
     function mint(address, uint256) external;
 
     function burn(address, uint256) external;
 
+    function closeOwnerMint() external;
+
     // ---------------------------------------------------------------------------------------- //
     // **************************************** Events **************************************** //
     // ---------------------------------------------------------------------------------------- //
 
-    event MinterChanged(address indexed _oldMinter, address indexed _newMinter);
+    event MinterAdded(address _newMinter);
+    event MinterRemoved(address _oldMinter);
+
+    event BurnerAdded(address _newBurner);
+    event BurnerRemoved(address _oldBurner);
+
     event OwnerChanged(address indexed _oldOwner, address indexed _newOwner);
-    event BurnerChanged(address indexed _oldBurner, address indexed _newBurner);
     event ReleaseOwnership(address indexed _oldOwner);
 
     event MintByOwner(address _account, uint256 _amount);
