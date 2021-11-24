@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./interfaces/IBuyerToken.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "./interfaces/IDegisToken.sol";
 
-/**
- * @title  Buyer Token
- * @notice Buyer tokens are distributed to buyers corresponding to the usd value they spend.
- *         You can deposit and burn your buyer tokens into purchaseIncentiveVault.
- *         Periodical reward will be given to the participants in purchaseIncentiveVault.
+/**@title  Degis Token
+ * @notice DegisToken inherits from ERC20Votes which contains the ERC20 Permit.
+ *         DegisToken can use the permit function rather than approve + transferFrom.
+ *
+ *         DegisToken has an owner, a minter and a burner.
+ *         When lauched on mainnet, the owner may be removed or tranferred to a multisig.
+ *         By default, the owner & minter account will be the one that deploys the contract.
+ *         The minter may(and should) later be passed to InsurancePool.
+ *         The burner may(and should) later be passed to EmergencyPool.
  */
-
-contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
+contract DegisToken is ERC20Permit, IDegisToken {
     address public owner;
 
     address[] public minterList;
@@ -20,14 +23,31 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
     address[] public burnerList;
     mapping(address => bool) isBurner;
 
-    constructor() {
+    uint256 public constant DEGIS_CAP = 10e8 ether;
+
+    bool public ownerMintEnabled; // Whether enable the owner to mint
+
+    /**
+     * @notice Use ERC20 + ERC20Permit constructor and set the owner, minter and burner
+     */
+    constructor() ERC20("DegisToken", "DEGIS") ERC20Permit("DegisToken") {
         owner = msg.sender;
-        minterList.push(msg.sender);
-        isMinter[msg.sender] = true;
+        // At the beginning, owner can mint tokens to the lock degis contract
+        ownerMintEnabled = true;
     }
 
+    // Only the owner can call some functions
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only the owner can call this function");
+        require(msg.sender == owner, "Only the owner can call this funciton");
+        _;
+    }
+
+    // Degis toke has a hard cap of 100 million
+    modifier notExceedCap(uint256 _amount) {
+        require(
+            totalSupply() + _amount <= cap(),
+            "DegisToken exceeds the cap (100 million)"
+        );
         _;
     }
 
@@ -47,6 +67,21 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
             "Only the address in the minter list can call this function"
         );
         _;
+    }
+
+    /**
+     * @dev Returns the cap on the token's total supply.
+     */
+    function cap() public pure returns (uint256) {
+        return DEGIS_CAP;
+    }
+
+    /**
+     * @notice Owner will not be able to mint tokens, used when investor tokens are minted
+     */
+    function closeOwnerMint() public onlyOwner {
+        ownerMintEnabled = false;
+        emit CloseOwnerMint(owner, block.number);
     }
 
     /**
@@ -135,21 +170,37 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
     }
 
     /**
-     * @notice Mint some buyer tokens
-     * @param _account Address to receive the tokens
+     * @notice Mint tokens
+     * @param _account Receiver's address
      * @param _amount Amount to be minted
      */
     function mint(address _account, uint256 _amount)
         public
+        notExceedCap(_amount)
         inMinterList(msg.sender)
     {
-        _mint(_account, _amount);
+        _mint(_account, _amount); // ERC20 method with an event
     }
 
     /**
-     * @notice Burn some buyer tokens
-     * @param _account Address to burn tokens
-     * @param _amount Amount to be burned
+     * @notice Mint tokens by the owner
+     * @param _account Receiver's address (Should be the lockDegis contract)
+     * @param _amount Amount to be minted
+     */
+    function mintByOwner(address _account, uint256 _amount)
+        public
+        onlyOwner
+        notExceedCap(_amount)
+    {
+        _mint(_account, _amount);
+
+        emit MintByOwner(_account, _amount);
+    }
+
+    /**
+     * @notice Burn tokens
+     * @param _account address
+     * @param _amount amount to be burned
      */
     function burn(address _account, uint256 _amount)
         public
