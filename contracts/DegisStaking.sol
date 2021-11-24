@@ -10,6 +10,7 @@ contract DegisStaking is ERC20("DegisStaking", "xDegis") {
     using SafeERC20 for IDegisToken;
 
     address public owner;
+
     IDegisToken degis;
 
     uint256 public degisPerBlock;
