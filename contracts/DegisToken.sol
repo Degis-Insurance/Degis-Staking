@@ -25,7 +25,8 @@ contract DegisToken is ERC20Permit, IDegisToken {
 
     uint256 public constant DEGIS_CAP = 10e8 ether;
 
-    bool public ownerMintEnabled; // Whether enable the owner to mint
+    // Whether enable the owner to mint
+    bool public ownerMintEnabled;
 
     /**
      * @notice Use ERC20 + ERC20Permit constructor and set the owner, minter and burner
@@ -192,6 +193,8 @@ contract DegisToken is ERC20Permit, IDegisToken {
         onlyOwner
         notExceedCap(_amount)
     {
+        require(ownerMintEnabled, "Owner minting is not enabled now");
+
         _mint(_account, _amount);
 
         emit MintByOwner(_account, _amount);

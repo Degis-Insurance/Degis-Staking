@@ -59,6 +59,7 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
             "This address is already a minter"
         );
         minterList.push(_newMinter);
+        isMinter[_newMinter] = true;
 
         emit MinterAdded(_newMinter);
     }
@@ -80,6 +81,8 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
             } else continue;
         }
 
+        isMinter[_oldMinter] = false;
+
         emit MinterRemoved(_oldMinter);
     }
 
@@ -93,6 +96,7 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
             "This address is already a burner"
         );
         burnerList.push(_newBurner);
+        isBurner[_newBurner] = true;
 
         emit BurnerAdded(_newBurner);
     }
@@ -113,6 +117,7 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
                 burnerList.pop();
             } else continue;
         }
+        isBurner[_oldBurner] = false;
 
         emit BurnerRemoved(_oldBurner);
     }
