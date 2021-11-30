@@ -12,7 +12,7 @@ module.exports = async (callback) => {
     const vault = await Vault.deployed();
     console.log("vault address:", vault.address);
 
-    await buyertoken.addMinter(vault.address, { from: account });
+    await vault.distributeReward(0, 5, { from: account });
 
     callback(true);
   } catch (err) {

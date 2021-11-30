@@ -3,8 +3,9 @@ pragma solidity 0.8.9;
 import "./interfaces/IBuyerToken.sol";
 import "./interfaces/IDegisToken.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./interfaces/IPurchaseIncentiveVault.sol";
 
-contract PurchaseIncentiveVault {
+contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     using SafeERC20 for IBuyerToken;
 
     address public owner;
@@ -26,15 +27,8 @@ contract PurchaseIncentiveVault {
     uint256 public currentDistributionIndex;
 
     uint256 public degisPerRound;
-    uint256 public distributionInterval; // in blocks
-    uint256 public lastDistribution;
-
-    event OwnershipTransferred(address _oldOwner, address _newOwner);
-    event ChangeDegisPerRound(uint256 _oldPerRound, uint256 _newPerRound);
-    event ChangeDistributionInterval(
-        uint256 _oldInterval,
-        uint256 _newInterval
-    );
+    uint256 public distributionInterval; // in block numbers
+    uint256 public lastDistribution; // in block numbers
 
     constructor(address _buyerToken, address _degisToken) {
         owner = msg.sender;
@@ -47,6 +41,9 @@ contract PurchaseIncentiveVault {
         _;
     }
 
+    /**
+     * @notice Check if users can stake at this time
+     */
     modifier canStake() {
         require(
             block.number - lastDistribution <= distributionInterval,
@@ -55,6 +52,9 @@ contract PurchaseIncentiveVault {
         _;
     }
 
+    /**
+     * @notice Check if admins can distribute at this time, oppsite to "canStake"
+     */
     modifier canDistribute() {
         require(
             block.number - lastDistribution > distributionInterval,
@@ -63,9 +63,23 @@ contract PurchaseIncentiveVault {
         _;
     }
 
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************ View Functions ************************************ //
+    // ---------------------------------------------------------------------------------------- //
+
+    /**
+     * @notice Check a user's pending reward
+     * @param _userAddress Address of the user
+     * @return userRewards Pending degis amount of this user
+     */
+    function pendingReward(address _userAddress) public view returns (uint256) {
+        return userRewards[_userAddress];
+    }
+
     /**
      * @notice Check if users can stake buyer tokens now
      * @dev Used for frontend
+     *      If exceed the interval, can not deposit and need to wait for distribution
      * @return ifCanStake Whether users can stake now
      */
     function checkIfCanStake() external view returns (bool) {
@@ -74,6 +88,27 @@ contract PurchaseIncentiveVault {
         else return false;
     }
 
+    /**
+     * @notice Get the amount of users in _round, used for distribution
+     * @param _round Round number to check
+     * @return totalUsers Total amount of users in _round
+     */
+    function getTotalUsersInRound(uint256 _round)
+        public
+        view
+        returns (uint256)
+    {
+        return usersInRound[_round].length;
+    }
+
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************ Set Functions ************************************* //
+    // ---------------------------------------------------------------------------------------- //
+
+    /**
+     * @notice Transfer the ownership
+     * @param _newOwner Address of the new owner
+     */
     function transferOwnerShip(address _newOwner) external onlyOwner {
         address oldOwner = owner;
         owner = _newOwner;
@@ -99,6 +134,10 @@ contract PurchaseIncentiveVault {
         distributionInterval = _newInterval;
         emit ChangeDistributionInterval(oldInterval, _newInterval);
     }
+
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************ Main Functions ************************************ //
+    // ---------------------------------------------------------------------------------------- //
 
     /**
      * @notice Stake buyer token into this contract
@@ -142,18 +181,22 @@ contract PurchaseIncentiveVault {
         uint256 totalShares = sharesInRound[currentRound];
         uint256 degisPerShare = (degisPerRound / totalShares) * 1e18;
 
+        uint256 length = getTotalUsersInRound(currentRound);
+
         // Distribute all at once (maybe not enough gas in one tx)
         if (_startIndex == 0 && _stopIndex == 0) {
-            uint256 length = usersInRound[currentRound].length;
             _distributeReward(currentRound, 0, length, degisPerShare);
             currentDistributionIndex = length;
         }
         // Distribute in a certain range (need several times distribution)
         else {
+            // Check if you start from the last check point
             require(
                 currentDistributionIndex == _startIndex,
                 "You need to start from the last distribution point"
             );
+            // Check if the stopindex exceeds the length
+            _stopIndex = _stopIndex > length ? _stopIndex : length;
             _distributeReward(
                 currentRound,
                 _startIndex,
@@ -167,6 +210,10 @@ contract PurchaseIncentiveVault {
             _finishDistribution();
         }
     }
+
+    // ---------------------------------------------------------------------------------------- //
+    // *********************************** Internal Functions ********************************* //
+    // ---------------------------------------------------------------------------------------- //
 
     /**
      * @notice Finish the distribution process
@@ -186,7 +233,9 @@ contract PurchaseIncentiveVault {
             uint256 userShares = userSharesInRound[userAddress][_round];
 
             if (userShares != 0) {
-                degis.mint(userAddress, userShares * _degisPerShare);
+                // degis.mint(userAddress, userShares * _degisPerShare);
+                // Update the pending reward of a user
+                userRewards[userAddress] += userShares * _degisPerShare;
                 delete userSharesInRound[userAddress][_round];
             } else continue;
         }
