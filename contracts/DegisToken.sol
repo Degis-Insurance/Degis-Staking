@@ -95,6 +95,7 @@ contract DegisToken is ERC20Permit, IDegisToken {
             "This address is already a minter"
         );
         minterList.push(_newMinter);
+        isMinter[_newMinter] = true;
 
         emit MinterAdded(_newMinter);
     }
@@ -116,6 +117,8 @@ contract DegisToken is ERC20Permit, IDegisToken {
             } else continue;
         }
 
+        isMinter[_oldMinter] = false;
+
         emit MinterRemoved(_oldMinter);
     }
 
@@ -129,6 +132,8 @@ contract DegisToken is ERC20Permit, IDegisToken {
             "This address is already a burner"
         );
         burnerList.push(_newBurner);
+
+        isBurner[_newBurner] = true;
 
         emit BurnerAdded(_newBurner);
     }
@@ -149,6 +154,8 @@ contract DegisToken is ERC20Permit, IDegisToken {
                 burnerList.pop();
             } else continue;
         }
+
+        isBurner[_oldBurner] = false;
 
         emit BurnerRemoved(_oldBurner);
     }

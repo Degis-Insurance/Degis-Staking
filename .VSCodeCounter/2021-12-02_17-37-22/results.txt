@@ -1,0 +1,50 @@
+Date : 2021-12-02 17:37:22
+Directory : /Volumes/Store/src/Degis-Staking
+Total : 19 files,  674 codes, 305 comments, 222 blanks, all 1201 lines
+
+Languages
++------------+------------+------------+------------+------------+------------+
+| language   | files      | code       | comment    | blank      | total      |
++------------+------------+------------+------------+------------+------------+
+| Solidity   |         10 |        511 |        209 |        171 |        891 |
+| JavaScript |          6 |        129 |         96 |         41 |        266 |
+| JSON       |          2 |         25 |          0 |          1 |         26 |
+| Markdown   |          1 |          9 |          0 |          9 |         18 |
++------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                              | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                 |         19 |        674 |        305 |        222 |      1,201 |
+| contracts                                                                         |         10 |        511 |        209 |        171 |        891 |
+| contracts/interfaces                                                              |          3 |         56 |         19 |         39 |        114 |
+| migrations                                                                        |          2 |         27 |          5 |         12 |         44 |
+| scripts                                                                           |          3 |         56 |          1 |         21 |         78 |
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| filename                                                                          | language   | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| /Volumes/Store/src/Degis-Staking/ReadMe.md                                        | Markdown   |          9 |          0 |          9 |         18 |
+| /Volumes/Store/src/Degis-Staking/address.json                                     | JSON       |          6 |          0 |          0 |          6 |
+| /Volumes/Store/src/Degis-Staking/contracts/BuyerToken.sol                         | Solidity   |         99 |         42 |         25 |        166 |
+| /Volumes/Store/src/Degis-Staking/contracts/DegisLPStaking.sol                     | Solidity   |          7 |          1 |          3 |         11 |
+| /Volumes/Store/src/Degis-Staking/contracts/DegisStaking.sol                       | Solidity   |         37 |          1 |         17 |         55 |
+| /Volumes/Store/src/Degis-Staking/contracts/DegisToken.sol                         | Solidity   |        120 |         64 |         31 |        215 |
+| /Volumes/Store/src/Degis-Staking/contracts/Migrations.sol                         | Solidity   |         15 |          1 |          4 |         20 |
+| /Volumes/Store/src/Degis-Staking/contracts/MockUSD.sol                            | Solidity   |         24 |          4 |         10 |         38 |
+| /Volumes/Store/src/Degis-Staking/contracts/PurchaseIncentiveVault.sol             | Solidity   |        153 |         77 |         42 |        272 |
+| /Volumes/Store/src/Degis-Staking/contracts/interfaces/IBuyerToken.sol             | Solidity   |         16 |          1 |         10 |         27 |
+| /Volumes/Store/src/Degis-Staking/contracts/interfaces/IDegisToken.sol             | Solidity   |         23 |         11 |         19 |         53 |
+| /Volumes/Store/src/Degis-Staking/contracts/interfaces/IPurchaseIncentiveVault.sol | Solidity   |         17 |          7 |         10 |         34 |
+| /Volumes/Store/src/Degis-Staking/migrations/1_initial_migration.js                | JavaScript |          4 |          0 |          2 |          6 |
+| /Volumes/Store/src/Degis-Staking/migrations/2_PurchaseIncentive.js                | JavaScript |         23 |          5 |         10 |         38 |
+| /Volumes/Store/src/Degis-Staking/package.json                                     | JSON       |         19 |          0 |          1 |         20 |
+| /Volumes/Store/src/Degis-Staking/scripts/addMinter.js                             | JavaScript |         17 |          1 |          8 |         26 |
+| /Volumes/Store/src/Degis-Staking/scripts/distribute.js                            | JavaScript |         16 |          0 |          6 |         22 |
+| /Volumes/Store/src/Degis-Staking/scripts/stake.js                                 | JavaScript |         23 |          0 |          7 |         30 |
+| /Volumes/Store/src/Degis-Staking/truffle-config.js                                | JavaScript |         46 |         90 |          8 |        144 |
+| Total                                                                             |            |        674 |        305 |        222 |      1,201 |
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
