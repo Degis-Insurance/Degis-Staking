@@ -3,7 +3,7 @@ const Vault = artifacts.require("PurchaseIncentiveVault");
 const DegisToken = artifacts.require("DegisToken");
 
 const router = "0xDc5f05ff3188570207f054B9751ba87Cb1488CcD";
-const farmingPool = "0x296dc4362382A4a6C3b057718E505a74d9395EA2";
+const farmingPool = "0x4Ad65338B774b0571d2eD9c8012556126a874262";
 
 module.exports = async (callback) => {
   try {
