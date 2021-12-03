@@ -3,7 +3,9 @@ const Vault = artifacts.require("PurchaseIncentiveVault");
 const DegisToken = artifacts.require("DegisToken");
 
 const router = "0xDc5f05ff3188570207f054B9751ba87Cb1488CcD";
-const farmingPool = "0x4Ad65338B774b0571d2eD9c8012556126a874262";
+const farmingPool = "0xFE9D6183c68d15b554232F6719Be297C89216b45";
+
+const degis_add = "0x6d3036117de5855e1ecd338838FF9e275009eAc2";
 
 module.exports = async (callback) => {
   try {
@@ -16,7 +18,7 @@ module.exports = async (callback) => {
     const vault = await Vault.deployed();
     console.log("vault address:", vault.address);
 
-    const degis = await DegisToken.deployed();
+    const degis = await DegisToken.at(degis_add);
 
     // await buyertoken.addMinter(vault.address, { from: account });
 
