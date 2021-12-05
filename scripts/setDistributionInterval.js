@@ -5,12 +5,18 @@ const PurchaseIncentiveVault = artifacts.require("PurchaseIncentiveVault");
 // --interval (reward interval)
 const args = require("minimist")(process.argv.slice(2));
 
+const fs = require("fs");
+
 module.exports = async (callback) => {
   try {
     const accounts = await web3.eth.getAccounts();
     const account = await accounts[0];
 
-    const vault = await PurchaseIncentiveVault.deployed();
+    const addressList = JSON.parse(fs.readFileSync("address.json"));
+
+    const vault = await PurchaseIncentiveVault.at(
+      addressList.PurchaseIncentiveVault
+    );
     console.log("vault address:", vault.address);
 
     // 100 blocks can settle
