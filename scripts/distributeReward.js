@@ -12,6 +12,9 @@ module.exports = async (callback) => {
     const vault = await Vault.deployed();
     console.log("vault address:", vault.address);
 
+    const currentRound = await vault.currentRound.call();
+    console.log("currentRound:", parseInt(currentRound));
+
     await vault.distributeReward(0, 5, { from: account });
 
     callback(true);

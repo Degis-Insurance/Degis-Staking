@@ -11,6 +11,7 @@ interface IPurchaseIncentiveVault {
         uint256 _oldInterval,
         uint256 _newInterval
     );
+    event RewardClaimed(address _userAddress, uint256 _userReward);
 
     // ---------------------------------------------------------------------------------------- //
     // ************************************** Functions *************************************** //
@@ -27,7 +28,19 @@ interface IPurchaseIncentiveVault {
 
     function lastDistribution() external view returns (uint256);
 
+    function pendingReward(address _userAddress)
+        external
+        view
+        returns (uint256);
+
+    function getUserShares(address _userAddress)
+        external
+        view
+        returns (uint256);
+
     function stakeBuyerToken(uint256 _amount) external;
+
+    function redeemBuyerToken(uint256 _amount) external;
 
     function distributeReward(uint256 _startIndex, uint256 _stopIndex) external;
 }

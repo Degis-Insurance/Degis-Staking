@@ -13,14 +13,14 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     IBuyerToken buyerToken;
     IDegisToken degis;
 
-    mapping(uint256 => uint256) sharesInRound;
+    mapping(uint256 => uint256) public sharesInRound;
 
-    mapping(uint256 => address[]) usersInRound;
+    mapping(uint256 => address[]) public usersInRound;
 
-    mapping(uint256 => bool) hasDistributed;
+    mapping(uint256 => bool) public hasDistributed;
 
-    mapping(address => mapping(uint256 => uint256)) userSharesInRound;
-    mapping(address => uint256) userRewards;
+    mapping(address => mapping(uint256 => uint256)) public userSharesInRound;
+    mapping(address => uint256) public userRewards;
 
     uint256 public currentRound;
 
@@ -34,21 +34,12 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
         owner = msg.sender;
         buyerToken = IBuyerToken(_buyerToken);
         degis = IDegisToken(_degisToken);
+
+        lastDistribution = block.number;
     }
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the owner can call this function");
-        _;
-    }
-
-    /**
-     * @notice Check if users can stake at this time
-     */
-    modifier canStake() {
-        require(
-            block.number - lastDistribution <= distributionInterval,
-            "Can not stake buyer token now, waiting for distribution"
-        );
         _;
     }
 
@@ -101,6 +92,14 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
         return usersInRound[_round].length;
     }
 
+    /**
+     * @notice Get your shares in the current round
+     * @param _userAddress Address of the user
+     */
+    function getUserShares(address _userAddress) public view returns (uint256) {
+        return userSharesInRound[_userAddress][currentRound];
+    }
+
     // ---------------------------------------------------------------------------------------- //
     // ************************************ Set Functions ************************************* //
     // ---------------------------------------------------------------------------------------- //
@@ -143,13 +142,11 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
      * @notice Stake buyer token into this contract
      * @param _amount Amount of buyer tokens to stake
      */
-    function stakeBuyerToken(uint256 _amount) public canStake {
+    function stakeBuyerToken(uint256 _amount) public {
         require(
             buyerToken.balanceOf(msg.sender) > 0,
             "You do not have any buyer token to deposit"
         );
-
-        buyerToken.burn(msg.sender, _amount);
 
         if (userSharesInRound[msg.sender][currentRound] == 0) {
             usersInRound[currentRound].push(msg.sender);
@@ -157,6 +154,22 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
 
         userSharesInRound[msg.sender][currentRound] += _amount;
         sharesInRound[currentRound] += _amount;
+    }
+
+    /**
+     * @notice Redeem buyer token from the vault
+     * @param _amount Amount to redeem
+     */
+    function redeemBuyerToken(uint256 _amount) public {
+        uint256 userBalance = userSharesInRound[msg.sender][currentRound];
+        require(userBalance >= _amount, "Not enough buyer tokens to redeem");
+
+        userSharesInRound[msg.sender][currentRound] -= _amount;
+        sharesInRound[currentRound] -= _amount;
+
+        if (userSharesInRound[msg.sender][currentRound] == 0) {
+            delete userSharesInRound[msg.sender][currentRound];
+        }
     }
 
     /**
@@ -196,13 +209,17 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
                 "You need to start from the last distribution point"
             );
             // Check if the stopindex exceeds the length
-            _stopIndex = _stopIndex > length ? _stopIndex : length;
-            _distributeReward(
-                currentRound,
-                _startIndex,
-                _stopIndex,
-                degisPerShare
-            );
+            _stopIndex = _stopIndex > length ? length : _stopIndex;
+
+            if (_stopIndex != 0) {
+                _distributeReward(
+                    currentRound,
+                    _startIndex,
+                    _stopIndex,
+                    degisPerShare
+                );
+            }
+
             currentDistributionIndex = _stopIndex;
         }
 
@@ -232,6 +249,8 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
             address userAddress = usersInRound[_round][i];
             uint256 userShares = userSharesInRound[userAddress][_round];
 
+            buyerToken.burn(userAddress, userShares);
+
             if (userShares != 0) {
                 // degis.mint(userAddress, userShares * _degisPerShare);
                 // Update the pending reward of a user
@@ -244,19 +263,14 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     /**
      * @notice You can claim your own reward if you want
      * @dev Can claim reward of the previous rounds
-     * @param _round Which round to claim
      */
-    function claimReward(uint256 _round) external {
-        uint256 userShares = userSharesInRound[msg.sender][_round];
+    function claimReward() external {
+        uint256 reward = userRewards[msg.sender];
 
-        require(userShares > 0, "You do not have enough degis in this round");
+        require(reward > 0, "You do not have any rewards to claim");
 
-        uint256 totalShares = sharesInRound[_round];
-        uint256 degisPerShare = (degisPerRound / totalShares) * 1e18;
-
-        degis.mint(msg.sender, userShares * degisPerShare);
-
-        delete userSharesInRound[msg.sender][_round];
+        degis.mint(msg.sender, reward);
+        emit RewardClaimed(msg.sender, reward);
     }
 
     /**
