@@ -152,6 +152,8 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
             usersInRound[currentRound].push(msg.sender);
         }
 
+        buyerToken.safeTransferFrom(msg.sender, address(this), _amount);
+
         userSharesInRound[msg.sender][currentRound] += _amount;
         sharesInRound[currentRound] += _amount;
     }
@@ -166,6 +168,8 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
 
         userSharesInRound[msg.sender][currentRound] -= _amount;
         sharesInRound[currentRound] -= _amount;
+
+        buyerToken.safeTransfer(msg.sender, _amount);
 
         if (userSharesInRound[msg.sender][currentRound] == 0) {
             delete userSharesInRound[msg.sender][currentRound];
@@ -192,7 +196,7 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
         );
 
         uint256 totalShares = sharesInRound[currentRound];
-        uint256 degisPerShare = (degisPerRound / totalShares) * 1e18;
+        uint256 degisPerShare = (degisPerRound * 1e18) / totalShares;
 
         uint256 length = getTotalUsersInRound(currentRound);
 
@@ -249,12 +253,14 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
             address userAddress = usersInRound[_round][i];
             uint256 userShares = userSharesInRound[userAddress][_round];
 
-            buyerToken.burn(userAddress, userShares);
+            buyerToken.burn(address(this), userShares);
 
             if (userShares != 0) {
                 // degis.mint(userAddress, userShares * _degisPerShare);
                 // Update the pending reward of a user
-                userRewards[userAddress] += userShares * _degisPerShare;
+                userRewards[userAddress] +=
+                    (userShares * _degisPerShare) /
+                    1e18;
                 delete userSharesInRound[userAddress][_round];
             } else continue;
         }
@@ -270,6 +276,9 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
         require(reward > 0, "You do not have any rewards to claim");
 
         degis.mint(msg.sender, reward);
+
+        delete userRewards[msg.sender];
+
         emit RewardClaimed(msg.sender, reward);
     }
 

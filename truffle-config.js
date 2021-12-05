@@ -17,6 +17,7 @@
  * phrase from a file you've .gitignored so it doesn't accidentally become public.
  *
  */
+const Web3 = require("web3");
 
 require("babel-register");
 require("babel-polyfill");
@@ -30,9 +31,14 @@ const result = dotenv.config();
 if (result.error) {
   throw result.error;
 }
-console.log(result.parsed);
+// console.log(result.parsed);
 var mnemonic = process.env.mnemonic;
 var infuraKey = process.env.infuraKey;
+var phrase = process.env.phrase;
+
+const fuji_provider = new Web3.providers.HttpProvider(
+  `https://api.avax-test.network/ext/bc/C/rpc`
+);
 
 module.exports = {
   /**
@@ -70,6 +76,22 @@ module.exports = {
       networkCheckTimeout: 1000000000,
       timeoutBlocks: 200, // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: true, // Skip dry run before migrations? (default: false for public nets )
+    },
+
+    fuji: {
+      provider: () => {
+        return new HDWalletProvider({
+          mnemonic: {
+            phrase: phrase,
+          },
+          numberOfAddresses: 1,
+          shareNonce: true,
+          providerOrUrl: fuji_provider,
+        });
+      },
+      network_id: "*",
+      timeoutBlocks: 50000,
+      skipDryRun: true,
     },
     // Another network with more advanced options...
     // advanced: {

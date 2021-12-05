@@ -2,12 +2,9 @@ const BuyerToken = artifacts.require("BuyerToken");
 const Vault = artifacts.require("PurchaseIncentiveVault");
 const DegisToken = artifacts.require("DegisToken");
 
-const router = "0xDc5f05ff3188570207f054B9751ba87Cb1488CcD";
-const farmingPool = "0xC3E497a38C62B66620e21F9E7Ca2180d8Cd6716B";
-const policyFlow = "0x19145b0AcFC8F38F59822Be268Ee636A5C055281";
-
-const degis_add = "0x6d3036117de5855e1ecd338838FF9e275009eAc2";
-const buyer_add = "0x876431DAE3c10273F7B58567419eb40157CcA9Eb";
+const router = "0xf661C2C9031e6549Fb1990A08d9eeAe63Db46e29";
+const farmingPool = "0x7C824EC3eff695ffbBBb44410144fDeB00862A69";
+const policyFlow = "0xfAa5961cE2090C7cc5602AA7bDA75401bD47fB32";
 
 const fs = require("fs");
 
@@ -26,9 +23,11 @@ module.exports = async (callback) => {
 
     const degis = await DegisToken.at(addressList.DegisToken);
 
-    //await buyertoken.addMinter(vault.address, { from: account });
+    await degis.addMinter(vault.address, { from: account });
 
     // await buyertoken.addMinter(policyFlow, { from: account });
+
+    //await buyertoken.addMinter(router, { from: account });
 
     // await degis.addMinter(farmingPool, { from: account });
 

@@ -16,15 +16,7 @@ module.exports = async (callback) => {
     const vault = await Vault.at(addressList.PurchaseIncentiveVault);
     console.log("vault address:", vault.address);
 
-    await buyertoken.mint(account, web3.utils.toWei("2000", "ether"), {
-      from: account,
-    });
-    const balance = await buyertoken.balanceOf(account);
-    console.log("user balance:", parseInt(balance / 1e18));
-
-    await vault.stakeBuyerToken(web3.utils.toWei("20", "ether"), {
-      from: account,
-    });
+    await buyertoken.addBurner(vault.address, { from: account });
 
     callback(true);
   } catch (err) {
