@@ -19,7 +19,20 @@ module.exports = async (callback) => {
     const currentRound = await vault.currentRound.call();
     console.log("currentRound:", parseInt(currentRound));
 
-    await vault.distributeReward(0, 0, { from: account });
+    const usersInRound = await vault.getTotalUsersInRound(currentRound, {
+      from: account,
+    });
+    console.log("total numbers", parseInt(usersInRound));
+
+    let i = 200;
+
+    // while (i < parseInt(usersInRound)) {
+    //   await vault.distributeReward(i, i + 50, { from: account });
+    //   console.log(i, i + 50);
+    //   i += 50;
+    // }
+
+    // await vault.distributeReward(150, 200, { from: account });
 
     callback(true);
   } catch (err) {
