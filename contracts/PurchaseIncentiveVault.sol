@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
+
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IBuyerToken.sol";
 import "./interfaces/IDegisToken.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPurchaseIncentiveVault.sol";
 
 contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
@@ -10,33 +11,57 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
 
     address public owner;
 
+    // Other tokens' interfaces
     IBuyerToken buyerToken;
     IDegisToken degis;
 
+    // Round number => Total shares(buyer tokens)
     mapping(uint256 => uint256) public sharesInRound;
 
+    // Round number => User address list
     mapping(uint256 => address[]) public usersInRound;
 
+    // Round number => Whether has been distributed
     mapping(uint256 => bool) public hasDistributed;
 
+    // User address => Round number => User shares
     mapping(address => mapping(uint256 => uint256)) public userSharesInRound;
+
+    // User address => Pending rewards
     mapping(address => uint256) public userRewards;
 
     uint256 public currentRound;
 
+    // Distribution may need several times so we keep an index
     uint256 public currentDistributionIndex;
 
+    // Reward per round in DEG
     uint256 public degisPerRound;
-    uint256 public distributionInterval; // in block numbers
-    uint256 public lastDistribution; // in block numbers
+
+    // The interval will only limit the distribution (not the staking)
+    uint256 public distributionInterval;
+
+    // Last distribution time (block numbers)
+    uint256 public lastDistribution;
+
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************* Constructor ************************************** //
+    // ---------------------------------------------------------------------------------------- //
 
     constructor(address _buyerToken, address _degisToken) {
         owner = msg.sender;
+
+        // Initialize two tokens
         buyerToken = IBuyerToken(_buyerToken);
         degis = IDegisToken(_degisToken);
 
+        // Initialize the last distribution block
         lastDistribution = block.number;
     }
+
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************** Modifiers *************************************** //
+    // ---------------------------------------------------------------------------------------- //
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the owner can call this function");
@@ -44,9 +69,9 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     }
 
     /**
-     * @notice Check if admins can distribute at this time, oppsite to "canStake"
+     * @notice Check if admins can distribute at this time
      */
-    modifier canDistribute() {
+    modifier hasPassedInterval() {
         require(
             block.number - lastDistribution > distributionInterval,
             "Two distributions need to have an interval "
@@ -63,20 +88,9 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
      * @param _userAddress Address of the user
      * @return userRewards Pending degis amount of this user
      */
+    // TODO: Test whether we need this view function
     function pendingReward(address _userAddress) public view returns (uint256) {
         return userRewards[_userAddress];
-    }
-
-    /**
-     * @notice Check if users can stake buyer tokens now
-     * @dev Used for frontend
-     *      If exceed the interval, can not deposit and need to wait for distribution
-     * @return ifCanStake Whether users can stake now
-     */
-    function checkIfCanStake() external view returns (bool) {
-        if (block.number - lastDistribution <= distributionInterval)
-            return true;
-        else return false;
     }
 
     /**
@@ -121,7 +135,7 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     function setDegisPerRound(uint256 _degisPerRound) external onlyOwner {
         uint256 oldPerRound = degisPerRound;
         degisPerRound = _degisPerRound;
-        emit ChangeDegisPerRound(oldPerRound, _degisPerRound);
+        emit DegisPerRoundChanged(oldPerRound, _degisPerRound);
     }
 
     /**
@@ -131,7 +145,7 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     function setDistributionInterval(uint256 _newInterval) external onlyOwner {
         uint256 oldInterval = distributionInterval;
         distributionInterval = _newInterval;
-        emit ChangeDistributionInterval(oldInterval, _newInterval);
+        emit DistributionIntervalChanged(oldInterval, _newInterval);
     }
 
     // ---------------------------------------------------------------------------------------- //
@@ -139,20 +153,15 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     // ---------------------------------------------------------------------------------------- //
 
     /**
-     * @notice Stake buyer token into this contract
+     * @notice Stake buyer tokens into this contract
      * @param _amount Amount of buyer tokens to stake
      */
-    function stakeBuyerToken(uint256 _amount) public {
-        require(
-            buyerToken.balanceOf(msg.sender) > 0,
-            "You do not have any buyer token to deposit"
-        );
+    function stake(uint256 _amount) external {
+        buyerToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         if (userSharesInRound[msg.sender][currentRound] == 0) {
             usersInRound[currentRound].push(msg.sender);
         }
-
-        buyerToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         userSharesInRound[msg.sender][currentRound] += _amount;
         sharesInRound[currentRound] += _amount;
@@ -162,18 +171,21 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
      * @notice Redeem buyer token from the vault
      * @param _amount Amount to redeem
      */
-    function redeemBuyerToken(uint256 _amount) public {
+    function redeem(uint256 _amount) external {
         uint256 userBalance = userSharesInRound[msg.sender][currentRound];
-        require(userBalance >= _amount, "Not enough buyer tokens to redeem");
-
-        userSharesInRound[msg.sender][currentRound] -= _amount;
-        sharesInRound[currentRound] -= _amount;
+        require(
+            userBalance >= _amount,
+            "Not enough buyer tokens for you to redeem"
+        );
 
         buyerToken.safeTransfer(msg.sender, _amount);
 
         if (userSharesInRound[msg.sender][currentRound] == 0) {
             delete userSharesInRound[msg.sender][currentRound];
         }
+
+        userSharesInRound[msg.sender][currentRound] -= _amount;
+        sharesInRound[currentRound] -= _amount;
     }
 
     /**
@@ -182,9 +194,9 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
      * @param _stopIndex Distribution stop index
      */
     function distributeReward(uint256 _startIndex, uint256 _stopIndex)
-        public
+        external
         onlyOwner
-        canDistribute
+        hasPassedInterval
     {
         require(
             degisPerRound > 0,
@@ -200,7 +212,8 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
 
         uint256 length = getTotalUsersInRound(currentRound);
 
-        // Distribute all at once (maybe not enough gas in one tx)
+        // Distribute all at once
+        // Maybe not enough gas in one tx, the judgement should be done by backend)
         if (_startIndex == 0 && _stopIndex == 0) {
             _distributeReward(currentRound, 0, length, degisPerShare);
             currentDistributionIndex = length;
@@ -227,9 +240,24 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
             currentDistributionIndex = _stopIndex;
         }
 
-        if (currentDistributionIndex == usersInRound[currentRound].length) {
+        if (currentDistributionIndex == length) {
             _finishDistribution();
         }
+    }
+
+    /**
+     * @notice Users need to claim their overall rewards
+     */
+    function claimReward() external {
+        uint256 userReward = userRewards[msg.sender];
+
+        require(userReward > 0, "You do not have any rewards to claim");
+
+        degis.mint(msg.sender, userReward);
+
+        delete userRewards[msg.sender];
+
+        emit RewardClaimed(msg.sender, userReward);
     }
 
     // ---------------------------------------------------------------------------------------- //
@@ -256,7 +284,6 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
             buyerToken.burn(address(this), userShares);
 
             if (userShares != 0) {
-                // degis.mint(userAddress, userShares * _degisPerShare);
                 // Update the pending reward of a user
                 userRewards[userAddress] +=
                     (userShares * _degisPerShare) /
@@ -264,22 +291,6 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
                 delete userSharesInRound[userAddress][_round];
             } else continue;
         }
-    }
-
-    /**
-     * @notice You can claim your own reward if you want
-     * @dev Can claim reward of the previous rounds
-     */
-    function claimReward() external {
-        uint256 reward = userRewards[msg.sender];
-
-        require(reward > 0, "You do not have any rewards to claim");
-
-        degis.mint(msg.sender, reward);
-
-        delete userRewards[msg.sender];
-
-        emit RewardClaimed(msg.sender, reward);
     }
 
     /**

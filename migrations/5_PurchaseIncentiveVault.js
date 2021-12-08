@@ -1,16 +1,21 @@
-const Vault = artifacts.require("PurchaseIncentiveVault");
-
+const PurchaseIncentiveVault = artifacts.require("PurchaseIncentiveVault");
 const fs = require("fs");
 
-module.exports = async function (deployer) {
+module.exports = async function (deployer, network) {
+  // Read the addressList
   const addressList = JSON.parse(fs.readFileSync("address.json"));
 
-  const buyerToken_add = addressList.BuyerToken;
-  const degisToken_add = addressList.DegisToken;
+  const buyerToken_address = addressList[network].BuyerToken;
+  const degisToken_address = addressList[network].DegisToken;
 
-  await deployer.deploy(Vault, buyerToken_add, degisToken_add);
+  // Deployment
+  await deployer.deploy(
+    PurchaseIncentiveVault,
+    buyerToken_address,
+    degisToken_address
+  );
 
-  addressList.PurchaseIncentiveVault = Vault.address;
-
+  // Store the address
+  addressList[network].PurchaseIncentiveVault = PurchaseIncentiveVault.address;
   fs.writeFileSync("address.json", JSON.stringify(addressList, null, "\t"));
 };

@@ -7,25 +7,41 @@ import "./interfaces/IBuyerToken.sol";
 /**
  * @title  Buyer Token
  * @notice Buyer tokens are distributed to buyers corresponding to the usd value they spend.
- *         You can deposit and burn your buyer tokens into purchaseIncentiveVault.
+ *         Users can deposit their buyer tokens into purchaseIncentiveVault.
  *         Periodical reward will be given to the participants in purchaseIncentiveVault.
+ *         When distributing purchase incentive reward, the buyer tokens will be burned.
+ * @dev    Need to set the correct minters and burners when reploying this contract.
  */
 
 contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
+    // Owner address
     address public owner;
 
+    // List of all minters
     address[] public minterList;
-    mapping(address => bool) isMinter;
+    mapping(address => bool) public isMinter;
 
+    // List of all burners
     address[] public burnerList;
-    mapping(address => bool) isBurner;
+    mapping(address => bool) public isBurner;
+
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************ Constructor *************************************** //
+    // ---------------------------------------------------------------------------------------- //
 
     constructor() {
         owner = msg.sender;
+        // Originally set the owner as a minter
+        // FIXME: This may be removed on mainnet
         minterList.push(msg.sender);
         isMinter[msg.sender] = true;
     }
 
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************* Modifiers **************************************** //
+    // ---------------------------------------------------------------------------------------- //
+
+    // Only the owner can call some functions
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the owner can call this function");
         _;
@@ -49,6 +65,10 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
         _;
     }
 
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************ Set Functions ************************************* //
+    // ---------------------------------------------------------------------------------------- //
+
     /**
      * @notice Add a new minter into the list
      * @param _newMinter Address of the new minter
@@ -68,7 +88,7 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
      * @notice Remove a minter from the list
      * @param _oldMinter Address of the minter to be removed
      */
-    function removeMinter(address _oldMinter) public onlyOwner {
+    function removeMinter(address _oldMinter) external onlyOwner {
         require(isMinter[_oldMinter] == true, "This address is not a minter");
 
         uint256 length = minterList.length;
@@ -80,7 +100,6 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
                 minterList.pop();
             } else continue;
         }
-
         isMinter[_oldMinter] = false;
 
         emit MinterRemoved(_oldMinter);
@@ -90,7 +109,7 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
      * @notice Add a new burner into the list
      * @param _newBurner Address of the new burner
      */
-    function addBurner(address _newBurner) public onlyOwner {
+    function addBurner(address _newBurner) external onlyOwner {
         require(
             isBurner[_newBurner] == false,
             "This address is already a burner"
@@ -105,7 +124,7 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
      * @notice Remove a minter from the list
      * @param _oldBurner Address of the minter to be removed
      */
-    function removeBurner(address _oldBurner) public onlyOwner {
+    function removeBurner(address _oldBurner) external onlyOwner {
         require(isMinter[_oldBurner] == true, "This address is not a burner");
 
         uint256 length = burnerList.length;
@@ -126,7 +145,7 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
      * @notice Pass the owner role to a new address, only the owner can change the owner
      * @param _newOwner New owner's address
      */
-    function passOwnership(address _newOwner) public onlyOwner {
+    function passOwnership(address _newOwner) external onlyOwner {
         owner = _newOwner;
         emit OwnerChanged(msg.sender, _newOwner);
     }
@@ -134,10 +153,14 @@ contract BuyerToken is ERC20("DegisBuyerToken", "DBT"), IBuyerToken {
     /**
      * @notice Release the ownership to zero address, can never get back !
      */
-    function releaseOwnership() public onlyOwner {
+    function releaseOwnership() external onlyOwner {
         owner = address(0);
-        emit ReleaseOwnership(msg.sender);
+        emit OwnershipReleased(msg.sender);
     }
+
+    // ---------------------------------------------------------------------------------------- //
+    // *********************************** Main Functions ************************************* //
+    // ---------------------------------------------------------------------------------------- //
 
     /**
      * @notice Mint some buyer tokens

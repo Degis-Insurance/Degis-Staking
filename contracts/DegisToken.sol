@@ -17,25 +17,35 @@ import "./interfaces/IDegisToken.sol";
 contract DegisToken is ERC20Permit, IDegisToken {
     address public owner;
 
+    // List of all minters
     address[] public minterList;
-    mapping(address => bool) isMinter;
+    mapping(address => bool) public isMinter;
 
+    // List of all burners
     address[] public burnerList;
-    mapping(address => bool) isBurner;
+    mapping(address => bool) public isBurner;
 
-    uint256 public constant DEGIS_CAP = 10e8 ether;
+    // Degis has a total supply of 100 million
+    uint256 public constant CAP = 1e8 ether;
 
-    // Whether enable the owner to mint
-    bool public ownerMintEnabled;
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************ Constructor *************************************** //
+    // ---------------------------------------------------------------------------------------- //
 
     /**
      * @notice Use ERC20 + ERC20Permit constructor and set the owner, minter and burner
      */
     constructor() ERC20("DegisToken", "DEGIS") ERC20Permit("DegisToken") {
         owner = msg.sender;
-        // At the beginning, owner can mint tokens to the lock degis contract
-        ownerMintEnabled = true;
+        // Originally set the owner as a minter
+        // FIXME: This may be removed on mainnet
+        minterList.push(msg.sender);
+        isMinter[msg.sender] = true;
     }
+
+    // ---------------------------------------------------------------------------------------- //
+    // ************************************* Modifiers **************************************** //
+    // ---------------------------------------------------------------------------------------- //
 
     // Only the owner can call some functions
     modifier onlyOwner() {
@@ -46,7 +56,7 @@ contract DegisToken is ERC20Permit, IDegisToken {
     // Degis toke has a hard cap of 100 million
     modifier notExceedCap(uint256 _amount) {
         require(
-            totalSupply() + _amount <= cap(),
+            totalSupply() + _amount <= CAP,
             "DegisToken exceeds the cap (100 million)"
         );
         _;
@@ -70,26 +80,15 @@ contract DegisToken is ERC20Permit, IDegisToken {
         _;
     }
 
-    /**
-     * @dev Returns the cap on the token's total supply.
-     */
-    function cap() public pure returns (uint256) {
-        return DEGIS_CAP;
-    }
-
-    /**
-     * @notice Owner will not be able to mint tokens, used when investor tokens are minted
-     */
-    function closeOwnerMint() public onlyOwner {
-        ownerMintEnabled = false;
-        emit CloseOwnerMint(owner, block.number);
-    }
+    // ---------------------------------------------------------------------------------------- //
+    // *********************************** Set Functions ************************************** //
+    // ---------------------------------------------------------------------------------------- //
 
     /**
      * @notice Add a new minter into the list
      * @param _newMinter Address of the new minter
      */
-    function addMinter(address _newMinter) public onlyOwner {
+    function addMinter(address _newMinter) external onlyOwner {
         require(
             isMinter[_newMinter] == false,
             "This address is already a minter"
@@ -104,7 +103,7 @@ contract DegisToken is ERC20Permit, IDegisToken {
      * @notice Remove a minter from the list
      * @param _oldMinter Address of the minter to be removed
      */
-    function removeMinter(address _oldMinter) public onlyOwner {
+    function removeMinter(address _oldMinter) external onlyOwner {
         require(isMinter[_oldMinter] == true, "This address is not a minter");
 
         uint256 length = minterList.length;
@@ -116,7 +115,6 @@ contract DegisToken is ERC20Permit, IDegisToken {
                 minterList.pop();
             } else continue;
         }
-
         isMinter[_oldMinter] = false;
 
         emit MinterRemoved(_oldMinter);
@@ -126,13 +124,12 @@ contract DegisToken is ERC20Permit, IDegisToken {
      * @notice Add a new burner into the list
      * @param _newBurner Address of the new burner
      */
-    function addBurner(address _newBurner) public onlyOwner {
+    function addBurner(address _newBurner) external onlyOwner {
         require(
             isBurner[_newBurner] == false,
             "This address is already a burner"
         );
         burnerList.push(_newBurner);
-
         isBurner[_newBurner] = true;
 
         emit BurnerAdded(_newBurner);
@@ -142,7 +139,7 @@ contract DegisToken is ERC20Permit, IDegisToken {
      * @notice Remove a minter from the list
      * @param _oldBurner Address of the minter to be removed
      */
-    function removeBurner(address _oldBurner) public onlyOwner {
+    function removeBurner(address _oldBurner) external onlyOwner {
         require(isMinter[_oldBurner] == true, "This address is not a burner");
 
         uint256 length = burnerList.length;
@@ -154,7 +151,6 @@ contract DegisToken is ERC20Permit, IDegisToken {
                 burnerList.pop();
             } else continue;
         }
-
         isBurner[_oldBurner] = false;
 
         emit BurnerRemoved(_oldBurner);
@@ -164,7 +160,7 @@ contract DegisToken is ERC20Permit, IDegisToken {
      * @notice Pass the owner role to a new address, only the owner can change the owner
      * @param _newOwner New owner's address
      */
-    function passOwnership(address _newOwner) public onlyOwner {
+    function passOwnership(address _newOwner) external onlyOwner {
         owner = _newOwner;
         emit OwnerChanged(msg.sender, _newOwner);
     }
@@ -174,8 +170,12 @@ contract DegisToken is ERC20Permit, IDegisToken {
      */
     function releaseOwnership() public onlyOwner {
         owner = address(0);
-        emit ReleaseOwnership(msg.sender);
+        emit OwnershipReleased(msg.sender);
     }
+
+    // ---------------------------------------------------------------------------------------- //
+    // *********************************** Main Functions ************************************* //
+    // ---------------------------------------------------------------------------------------- //
 
     /**
      * @notice Mint tokens
@@ -188,23 +188,6 @@ contract DegisToken is ERC20Permit, IDegisToken {
         inMinterList(msg.sender)
     {
         _mint(_account, _amount); // ERC20 method with an event
-    }
-
-    /**
-     * @notice Mint tokens by the owner
-     * @param _account Receiver's address (Should be the lockDegis contract)
-     * @param _amount Amount to be minted
-     */
-    function mintByOwner(address _account, uint256 _amount)
-        public
-        onlyOwner
-        notExceedCap(_amount)
-    {
-        require(ownerMintEnabled, "Owner minting is not enabled now");
-
-        _mint(_account, _amount);
-
-        emit MintByOwner(_account, _amount);
     }
 
     /**
