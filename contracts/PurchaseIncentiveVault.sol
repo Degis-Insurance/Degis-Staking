@@ -6,6 +6,13 @@ import "./interfaces/IBuyerToken.sol";
 import "./interfaces/IDegisToken.sol";
 import "./interfaces/IPurchaseIncentiveVault.sol";
 
+/**
+ * @title  Purchase Incentive Vault
+ * @notice This is the purchase incentive vault for staking buyer tokens.
+ *         Users first stake their buyer tokens and wait for distribution.
+ *         About every 24 hours, the reward will be calculated to users' account.
+ *         After disrtribution, users' reward balance will update but they still need to manually claim the reward.
+ */
 contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
     using SafeERC20 for IBuyerToken;
 
@@ -122,10 +129,10 @@ contract PurchaseIncentiveVault is IPurchaseIncentiveVault {
      * @notice Transfer the ownership
      * @param _newOwner Address of the new owner
      */
-    function transferOwnerShip(address _newOwner) external onlyOwner {
+    function passOwnership(address _newOwner) external onlyOwner {
         address oldOwner = owner;
         owner = _newOwner;
-        emit OwnershipTransferred(oldOwner, _newOwner);
+        emit OwnerChanged(oldOwner, _newOwner);
     }
 
     /**

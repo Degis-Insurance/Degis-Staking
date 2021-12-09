@@ -5,7 +5,7 @@ interface IPurchaseIncentiveVault {
     // ---------------------------------------------------------------------------------------- //
     // ************************************* Events ******************************************* //
     // ---------------------------------------------------------------------------------------- //
-    event OwnershipTransferred(address _oldOwner, address _newOwner);
+    event OwnerChanged(address _oldOwner, address _newOwner);
     event DegisPerRoundChanged(uint256 _oldPerRound, uint256 _newPerRound);
     event DistributionIntervalChanged(
         uint256 _oldInterval,
@@ -47,7 +47,7 @@ interface IPurchaseIncentiveVault {
      * @notice Transfer the ownership
      * @param _newOwner Address of the new owner
      */
-    function transferOwnerShip(address _newOwner) external;
+    function passOwnership(address _newOwner) external;
 
     /**
      * @notice Set degis distribution per round
