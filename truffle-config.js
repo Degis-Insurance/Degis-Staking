@@ -1,7 +1,7 @@
 const Web3 = require("web3");
 
 require("babel-register");
-require("babel-polyfill");
+// require("babel-polyfill");
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
 //

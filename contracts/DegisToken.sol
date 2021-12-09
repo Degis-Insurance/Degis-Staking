@@ -188,6 +188,7 @@ contract DegisToken is ERC20Permit, IDegisToken {
         inMinterList(msg.sender)
     {
         _mint(_account, _amount); // ERC20 method with an event
+        emit Mint(_account, _amount);
     }
 
     /**

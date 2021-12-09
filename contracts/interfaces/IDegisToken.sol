@@ -40,4 +40,6 @@ interface IDegisToken is IERC20, IERC20Permit {
 
     event OwnerChanged(address indexed _oldOwner, address indexed _newOwner);
     event OwnershipReleased(address indexed _oldOwner);
+
+    event Mint(address _account, uint256 _amount);
 }
